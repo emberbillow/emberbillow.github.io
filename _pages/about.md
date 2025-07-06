@@ -1,6 +1,6 @@
 ---
 permalink: /
-title: "Learn to do menial jobs in science"
+title: "Learn to do menial jobs in science —— Pavlov"
 author_profile: true
 redirect_from: 
   - /about/
