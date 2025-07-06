@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multifractal Cascade Data Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        input, select {
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 1em;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1em;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(238, 90, 82, 0.4);
+        }
+        
+        #surface-plot {
+            width: 100%;
+            height: 600px;
+            margin: 20px 0;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-box {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌊 Multifractal Cascade Generator</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="gridType">Grid Type:</label>
+                <select id="gridType" onchange="toggleGridControls()">
+                    <option value="square" selected>Square Grid</option>
+                    <option value="rectangle">Rectangle Grid</option>
+                </select>
+            </div>
+            
+            <div class="control-group" id="squareGridControl">
+                <label for="gridSize">Grid Size (2^n):</label>
+                <select id="gridSize">
+                    <option value="6">64×64</option>
+                    <option value="7" selected>128×128</option>
+                    <option value="8">256×256</option>
+                    <option value="9">512×512</option>
+                    <option value="10">1024×1024</option>
+                </select>
+            </div>
+            
+            <div class="control-group" id="rectangleWidthControl" style="display: none;">
+                <label for="gridWidth">Grid Width (2^n):</label>
+                <select id="gridWidth">
+                    <option value="6">64</option>
+                    <option value="7" selected>128</option>
+                    <option value="8">256</option>
+                    <option value="9">512</option>
+                    <option value="10">1024</option>
+                </select>
+            </div>
+            
+            <div class="control-group" id="rectangleHeightControl" style="display: none;">
+                <label for="gridHeight">Grid Height (2^n):</label>
+                <select id="gridHeight">
+                    <option value="6">64</option>
+                    <option value="7" selected>128</option>
+                    <option value="8">256</option>
+                    <option value="9">512</option>
+                    <option value="10">1024</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="cascadeLevels">Cascade Levels:</label>
+                <input type="number" id="cascadeLevels" value="6" min="3" max="10">
+            </div>
+            
+            <div class="control-group">
+                <label for="beta">Intermittency (β):</label>
+                <input type="number" id="beta" value="0.3" min="0.1" max="0.8" step="0.05">
+            </div>
+            
+            <div class="control-group">
+                <label for="seed">Random Seed:</label>
+                <input type="number" id="seed" value="42">
+            </div>
+            
+            <div class="control-group">
+                <label for="colorScale">Color Scale:</label>
+                <select id="colorScale">
+                    <option value="Viridis">Viridis</option>
+                    <option value="Plasma">Plasma</option>
+                    <option value="Inferno">Inferno</option>
+                    <option value="Hot">Hot</option>
+                    <option value="Rainbow">Rainbow</option>
+                    <option value="Jet">Jet</option>
+                    <option value="Blues">Blues</option>
+                    <option value="Reds">Reds</option>
+                </select>
+            </div>
+            
+            <div class="control-group" style="align-self: end;">
+                <button onclick="generateAndPlot()">Generate Multifractal Data</button>
+            </div>
+        </div>
+        
+        <div id="surface-plot"></div>
+        
+        <div class="stats" id="stats"></div>
+    </div>
+
+    <script>
+        // Simple seeded random number generator
+        class SeededRandom {
+            constructor(seed) {
+                this.seed = seed;
+            }
+            
+            next() {
+                this.seed = (this.seed * 9301 + 49297) % 233280;
+                return this.seed / 233280;
+            }
+            
+            normal() {
+                // Box-Muller transform
+                if (this.spare !== undefined) {
+                    const tmp = this.spare;
+                    delete this.spare;
+                    return tmp;
+                }
+                
+                const u = this.next();
+                const v = this.next();
+                const mag = Math.sqrt(-2 * Math.log(u));
+                this.spare = mag * Math.cos(2 * Math.PI * v);
+                return mag * Math.sin(2 * Math.PI * v);
+            }
+        }
+        
+        async function multiplicativeCascade(gridWidth, gridHeight, levels, beta, seed) {
+            const rng = new SeededRandom(seed);
+            
+            // Initialize grid with uniform values using typed array for better performance
+            let grid = new Array(gridHeight);
+            for (let i = 0; i < gridHeight; i++) {
+                grid[i] = new Float32Array(gridWidth).fill(1.0);
+            }
+            
+            // Calculate the number of levels based on the smaller dimension
+            const minDim = Math.min(gridWidth, gridHeight);
+            const maxLevels = Math.floor(Math.log2(minDim));
+            const actualLevels = Math.min(levels, maxLevels);
+            
+            // Perform cascade iterations with yield for large grids
+            for (let level = 0; level < actualLevels; level++) {
+                const blockWidth = Math.floor(gridWidth / Math.pow(2, level));
+                const blockHeight = Math.floor(gridHeight / Math.pow(2, level));
+                const numBlocksX = Math.pow(2, level);
+                const numBlocksY = Math.pow(2, level);
+                
+                if (blockWidth < 2 || blockHeight < 2) break;
+                
+                // Yield control for large grids to prevent stack overflow
+                if (gridWidth * gridHeight > 65536) { // 256x256
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+                
+                for (let i = 0; i < numBlocksY; i++) {
+                    for (let j = 0; j < numBlocksX; j++) {
+                        const startI = i * blockHeight;
+                        const startJ = j * blockWidth;
+                        const halfBlockHeight = Math.floor(blockHeight / 2);
+                        const halfBlockWidth = Math.floor(blockWidth / 2);
+                        
+                        // Generate random multipliers with log-normal distribution
+                        const multipliers = new Float32Array(4);
+                        for (let k = 0; k < 4; k++) {
+                            multipliers[k] = Math.exp(beta * rng.normal() - beta * beta / 2);
+                        }
+                        
+                        // Normalize multipliers to conserve mass
+                        let sum = 0;
+                        for (let k = 0; k < 4; k++) sum += multipliers[k];
+                        const normFactor = 4 / sum;
+                        
+                        // Apply multipliers to quadrants efficiently
+                        const quadrants = [[0, 0], [0, 1], [1, 0], [1, 1]];
+                        
+                        for (let q = 0; q < 4; q++) {
+                            const [qi, qj] = quadrants[q];
+                            const mult = multipliers[q] * normFactor;
+                            
+                            const startII = startI + qi * halfBlockHeight;
+                            const startJJ = startJ + qj * halfBlockWidth;
+                            const endII = Math.min(startII + halfBlockHeight, gridHeight);
+                            const endJJ = Math.min(startJJ + halfBlockWidth, gridWidth);
+                            
+                            for (let ii = startII; ii < endII; ii++) {
+                                const row = grid[ii];
+                                for (let jj = startJJ; jj < endJJ; jj++) {
+                                    row[jj] *= mult;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Convert back to regular arrays for plotting
+            const result = new Array(gridHeight);
+            for (let i = 0; i < gridHeight; i++) {
+                result[i] = Array.from(grid[i]);
+            }
+            
+            return result;
+        }
+        
+        function calculateStats(grid) {
+            const flat = grid.flat();
+            const mean = flat.reduce((a, b) => a + b, 0) / flat.length;
+            const variance = flat.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / flat.length;
+            const std = Math.sqrt(variance);
+            const min = Math.min(...flat);
+            const max = Math.max(...flat);
+            
+            // Estimate multifractal dimension (simplified)
+            const logValues = flat.filter(x => x > 0).map(x => Math.log(x));
+            const logMean = logValues.reduce((a, b) => a + b, 0) / logValues.length;
+            const logStd = Math.sqrt(logValues.reduce((sum, val) => sum + Math.pow(val - logMean, 2), 0) / logValues.length);
+            
+            return {
+                mean: mean.toFixed(4),
+                std: std.toFixed(4),
+                min: min.toFixed(4),
+                max: max.toFixed(4),
+                skewness: (logStd * Math.sqrt(flat.length)).toFixed(2),
+                range: (max / min).toFixed(1)
+            };
+        }
+        
+        function toggleGridControls() {
+            const gridType = document.getElementById('gridType').value;
+            const squareControl = document.getElementById('squareGridControl');
+            const widthControl = document.getElementById('rectangleWidthControl');
+            const heightControl = document.getElementById('rectangleHeightControl');
+            
+            if (gridType === 'square') {
+                squareControl.style.display = 'flex';
+                widthControl.style.display = 'none';
+                heightControl.style.display = 'none';
+            } else {
+                squareControl.style.display = 'none';
+                widthControl.style.display = 'flex';
+                heightControl.style.display = 'flex';
+            }
+        }
+        
+        function toggleGridControls() {
+            const gridType = document.getElementById('gridType').value;
+            const squareControl = document.getElementById('squareGridControl');
+            const widthControl = document.getElementById('rectangleWidthControl');
+            const heightControl = document.getElementById('rectangleHeightControl');
+            
+            if (gridType === 'square') {
+                squareControl.style.display = 'flex';
+                widthControl.style.display = 'none';
+                heightControl.style.display = 'none';
+            } else {
+                squareControl.style.display = 'none';
+                widthControl.style.display = 'flex';
+                heightControl.style.display = 'flex';
+            }
+        }
+        
+        async function generateAndPlot() {
+            const gridType = document.getElementById('gridType').value;
+            let gridWidth, gridHeight, gridLabel;
+            
+            if (gridType === 'square') {
+                const gridSizeExp = parseInt(document.getElementById('gridSize').value);
+                gridWidth = gridHeight = Math.pow(2, gridSizeExp);
+                gridLabel = `${gridWidth}×${gridHeight}`;
+            } else {
+                const gridWidthExp = parseInt(document.getElementById('gridWidth').value);
+                const gridHeightExp = parseInt(document.getElementById('gridHeight').value);
+                gridWidth = Math.pow(2, gridWidthExp);
+                gridHeight = Math.pow(2, gridHeightExp);
+                gridLabel = `${gridWidth}×${gridHeight}`;
+            }
+            
+            const levels = parseInt(document.getElementById('cascadeLevels').value);
+            const beta = parseFloat(document.getElementById('beta').value);
+            const seed = parseInt(document.getElementById('seed').value);
+            const colorScale = document.getElementById('colorScale').value;
+            
+            // Show loading message for large grids
+            if (gridWidth * gridHeight > 65536) {
+                document.getElementById('surface-plot').innerHTML = `
+                    <div style="display: flex; justify-content: center; align-items: center; height: 100%; color: white; font-size: 18px;">
+                        <div>
+                            <div>🧮 Generating ${gridLabel} multifractal cascade...</div>
+                            <div style="margin-top: 10px; font-size: 14px; opacity: 0.8;">This may take a moment for large grids</div>
+                        </div>
+                    </div>
+                `;
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            // Generate multifractal data
+            console.log(`Generating multifractal cascade (${gridLabel})...`);
+            const grid = await multiplicativeCascade(gridWidth, gridHeight, levels, beta, seed);
+            
+            // Calculate statistics
+            const stats = calculateStats(grid);
+            
+            // Create surface plot
+            const trace = {
+                z: grid,
+                type: 'surface',
+                colorscale: colorScale,
+                lighting: {
+                    ambient: 0.4,
+                    diffuse: 0.8,
+                    fresnel: 0.2,
+                    specular: 1.3,
+                    roughness: 0.1
+                },
+                contours: {
+                    z: {
+                        show: true,
+                        usecolormap: true,
+                        highlightcolor: "#42f462",
+                        project: {z: true}
+                    }
+                },
+                showscale: true,
+                colorbar: {
+                    title: 'Intensity',
+                    titleside: 'right'
+                }
+            };
+            
+            const layout = {
+                title: {
+                    text: `Multifractal Surface (β=${beta}, ${gridLabel})`,
+                    font: {size: 18, color: 'white'}
+                },
+                scene: {
+                    xaxis: {title: 'X', color: 'white'},
+                    yaxis: {title: 'Y', color: 'white'},
+                    zaxis: {title: 'Intensity', color: 'white'},
+                    bgcolor: 'rgba(0,0,0,0)',
+                    camera: {
+                        eye: {x: 1.5, y: 1.5, z: 1.5}
+                    }
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: {color: 'white'}
+            };
+            
+            const config = {
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d']
+            };
+            
+            Plotly.newPlot('surface-plot', [trace], layout, config);
+            
+            // Display statistics
+            const statsHtml = `
+                <div class="stat-box">
+                    <div class="stat-value">${stats.mean}</div>
+                    <div class="stat-label">Mean</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${stats.std}</div>
+                    <div class="stat-label">Std Dev</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${stats.min}</div>
+                    <div class="stat-label">Minimum</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${stats.max}</div>
+                    <div class="stat-label">Maximum</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${stats.range}×</div>
+                    <div class="stat-label">Dynamic Range</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${stats.skewness}</div>
+                    <div class="stat-label">Log-Intermittency</div>
+                </div>
+            `;
+            
+            document.getElementById('stats').innerHTML = statsHtml;
+        }
+        
+        // Generate initial plot when page loads
+        window.onload = function() {
+            generateAndPlot();
+        };
+    </script>
+</body>
+</html>
