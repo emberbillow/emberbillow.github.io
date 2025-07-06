@@ -7,9 +7,9 @@ redirect_from:
   - /about.html
 ---
 
-This is the front page of a website that is powered by the [Academic Pages template](https://github.com/academicpages/academicpages.github.io) and hosted on GitHub pages. [GitHub pages](https://pages.github.com) is a free service in which websites are built and hosted from code and data stored in a GitHub repository, automatically updating when a new commit is made to the repository. This template was forked from the [Minimal Mistakes Jekyll Theme](https://mmistakes.github.io/minimal-mistakes/) created by Michael Rose, and then extended to support the kinds of content that academics have: publications, talks, teaching, a portfolio, blog posts, and a dynamically-generated CV. Incidentally, these same features make it a great template for anyone that needs to show off a professional template!
+My name is Jian Wang. I am an Associate Professor with a research focus on spatial data mining and its applications in geosciences, particularly in quantitative mineral prediction and uncertainty evaluation. I am honored to be a Fellow of the Association of Applied Geochemists, a life member of the International Association for Mathematical Geosciences, and a member of the young editorial board for the Journal of Chengdu University of Technology (Science & Technology Edition).
 
- You can fork [this template](https://github.com/academicpages/academicpages.github.io) right now, modify the configuration and Markdown files, add your own PDFs and other content, and have your own site for free, with no ads!
+My academic work includes leading several research projects funded by the National Natural Science Foundation of China and the Sichuan Provincial Science and Technology Program. I have published over 30 papers in respected scientific journals, including one ESI Highly Cited Paper. Additionally, I have co-authored a monograph and hold two national invention patents and three software copyrights.
 
 A data-driven personal website
 ======
