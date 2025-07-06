@@ -14,4 +14,4 @@ My academic work includes leading several research projects funded by the Nation
 
 For more info
 ------
-More info about configuring Academic Pages can be found in [the guide](https://academicpages.github.io/markdown/). The [guides for the Minimal Mistakes theme](https://mmistakes.github.io/minimal-mistakes/docs/configuration/) (which this theme was forked from) might also be helpful. This github project is forked from：[学术主页模板](https://github.com/academicpages/academicpages.github.io)，以及[使用说明](https://blog.csdn.net/qd1813100174/article/details/128604858).
+More info about configuring Academic Pages can be found in [the guide](https://academicpages.github.io/markdown/). This github project is forked from：[学术主页模板](https://github.com/academicpages/academicpages.github.io)，[并请参考使用说明](https://blog.csdn.net/qd1813100174/article/details/128604858).
