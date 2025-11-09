@@ -17,8 +17,8 @@ main:
   - title: "Code"
     url: /talks/
     
-#  - title: "Portfolio"
-#    url: /portfolio/
+  - title: "Data"
+    url: /portfolio/
         
 #  - title: "Blog Posts"
 #    url: /year-archive/
