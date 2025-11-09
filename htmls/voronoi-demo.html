@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态Voronoi图演示</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .info {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: crosshair;
+            display: block;
+            margin: 0 auto;
+            background: #f9f9f9;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-secondary {
+            background: #e0e7ff;
+            color: #4c51bf;
+        }
+        .btn-danger {
+            background: #fee;
+            color: #c53030;
+        }
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 500;
+            min-height: 24px;
+        }
+        .status.animating {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status.ready {
+            background: #d1fae5;
+            color: #065f46;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 动态Voronoi图演示</h1>
+        <div class="info">点击画布添加新的点，观看Voronoi图的动态更新过程</div>
+        <canvas id="canvas" width="800" height="600"></canvas>
+        <div class="controls">
+            <button class="btn-primary" onclick="addRandomPoint()">随机添加点</button>
+            <button class="btn-secondary" onclick="toggleAnimation()">切换动画</button>
+            <button class="btn-danger" onclick="clearPoints()">清除所有点</button>
+        </div>
+        <div id="status" class="status ready">准备就绪 - 当前点数: 5</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+        
+        let points = [];
+        let isAnimating = false;
+        let animationEnabled = true;
+        let animationProgress = 0;
+        let newPointIndex = -1;
+
+        // 颜色生成
+        function getColor(index) {
+            const colors = [
+                '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', 
+                '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2',
+                '#F8B739', '#52B788', '#E76F51', '#2A9D8F'
+            ];
+            return colors[index % colors.length];
+        }
+
+        // 初始化点
+        function initPoints() {
+            points = [
+                {x: 200, y: 200},
+                {x: 600, y: 200},
+                {x: 400, y: 400},
+                {x: 200, y: 500},
+                {x: 600, y: 500}
+            ];
+            drawVoronoi();
+            updateStatus();
+        }
+
+        // 计算Voronoi图
+        function drawVoronoi(progress = 1) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制Voronoi区域
+            const pixelData = ctx.createImageData(canvas.width, canvas.height);
+            
+            for (let x = 0; x < canvas.width; x++) {
+                for (let y = 0; y < canvas.height; y++) {
+                    let minDist = Infinity;
+                    let closestPoint = 0;
+                    
+                    // 找到最近的点
+                    for (let i = 0; i < points.length; i++) {
+                        // 如果正在动画且是新点，根据进度调整影响力
+                        let weight = 1;
+                        if (i === newPointIndex && progress < 1) {
+                            weight = progress;
+                        }
+                        
+                        const dx = x - points[i].x;
+                        const dy = y - points[i].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy) / weight;
+                        
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closestPoint = i;
+                        }
+                    }
+                    
+                    // 设置像素颜色
+                    const color = hexToRgb(getColor(closestPoint));
+                    const index = (y * canvas.width + x) * 4;
+                    pixelData.data[index] = color.r;
+                    pixelData.data[index + 1] = color.g;
+                    pixelData.data[index + 2] = color.b;
+                    pixelData.data[index + 3] = 180; // 透明度
+                }
+            }
+            
+            ctx.putImageData(pixelData, 0, 0);
+            
+            // 绘制点
+            points.forEach((point, i) => {
+                // 新点的大小随动画进度变化
+                let size = 6;
+                if (i === newPointIndex && progress < 1) {
+                    size = 2 + progress * 4;
+                }
+                
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+                ctx.fillStyle = getColor(i);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 绘制点的序号
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(i + 1, point.x, point.y);
+            });
+        }
+
+        // 16进制转RGB
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : {r: 0, g: 0, b: 0};
+        }
+
+        // 动画更新
+        function animate() {
+            if (!isAnimating) return;
+            
+            animationProgress += 0.02;
+            
+            if (animationProgress >= 1) {
+                animationProgress = 1;
+                isAnimating = false;
+                newPointIndex = -1;
+                statusEl.className = 'status ready';
+                statusEl.textContent = `准备就绪 - 当前点数: ${points.length}`;
+            } else {
+                statusEl.className = 'status animating';
+                statusEl.textContent = `正在更新Voronoi图... ${Math.round(animationProgress * 100)}%`;
+            }
+            
+            drawVoronoi(animationProgress);
+            
+            if (isAnimating) {
+                requestAnimationFrame(animate);
+            }
+        }
+
+        // 添加点
+        function addPoint(x, y) {
+            if (isAnimating) return;
+            
+            points.push({x, y});
+            newPointIndex = points.length - 1;
+            
+            if (animationEnabled) {
+                isAnimating = true;
+                animationProgress = 0;
+                animate();
+            } else {
+                drawVoronoi();
+                updateStatus();
+            }
+        }
+
+        // 随机添加点
+        function addRandomPoint() {
+            const x = Math.random() * (canvas.width - 40) + 20;
+            const y = Math.random() * (canvas.height - 40) + 20;
+            addPoint(x, y);
+        }
+
+        // 清除点
+        function clearPoints() {
+            points = [];
+            newPointIndex = -1;
+            isAnimating = false;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            updateStatus();
+        }
+
+        // 切换动画
+        function toggleAnimation() {
+            animationEnabled = !animationEnabled;
+            updateStatus();
+        }
+
+        // 更新状态
+        function updateStatus() {
+            if (!isAnimating) {
+                statusEl.className = 'status ready';
+                statusEl.textContent = `${animationEnabled ? '动画已启用' : '动画已禁用'} - 当前点数: ${points.length}`;
+            }
+        }
+
+        // 点击画布添加点
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            addPoint(x, y);
+        });
+
+        // 初始化
+        initPoints();
+    </script>
+</body>
+</html>
