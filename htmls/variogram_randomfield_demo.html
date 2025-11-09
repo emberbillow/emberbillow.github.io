@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>变差函数与空间随机场演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .algorithm-badge {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .controls {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .control-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .control-item {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        select, input[type="number"] {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        .param-description {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+        button {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .generate-btn {
+            display: block;
+            margin: 20px auto 0;
+        }
+        .visualization {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .field-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .field-title {
+            text-align: center;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+        .variogram-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .variogram-title {
+            text-align: center;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .stat-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-bottom: 4px;
+        }
+        .stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .info-box {
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+        .info-box h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 变差函数与空间随机场演示系统</h1>
+        <div class="subtitle">地统计学教学工具 - 直观理解变差函数结构对空间模式的影响</div>
+        <div class="algorithm-badge">
+            <span class="badge">⚡ 使用Cholesky分解算法生成（基于协方差矩阵）</span>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <div class="control-item">
+                    <label>变差函数类型</label>
+                    <select id="variogramType">
+                        <option value="spherical">球状模型 (Spherical)</option>
+                        <option value="exponential" selected>指数模型 (Exponential)</option>
+                        <option value="gaussian">高斯模型 (Gaussian)</option>
+                        <option value="linear">线性模型 (Linear)</option>
+                        <option value="nugget">纯块金效应 (Pure Nugget)</option>
+                    </select>
+                </div>
+                
+                <div class="control-item">
+                    <label>块金值 (Nugget) C₀</label>
+                    <input type="number" id="nugget" value="0.0" min="0" max="1" step="0.1">
+                    <div class="param-description">短距离变异，通常由测量误差引起</div>
+                </div>
+                
+                <div class="control-item">
+                    <label>基台值 (Sill) C₀+C</label>
+                    <input type="number" id="sill" value="1.0" min="0.1" max="5" step="0.1">
+                    <div class="param-description">总的空间变异性（标准差的平方）</div>
+                </div>
+                
+                <div class="control-item">
+                    <label>变程 (Range) a</label>
+                    <input type="number" id="range" value="20" min="5" max="80" step="5">
+                    <div class="param-description">空间相关性的有效距离（像素单位）</div>
+                </div>
+                
+                <div class="control-item">
+                    <label>网格大小</label>
+                    <input type="number" id="gridSize" value="32" min="8" max="128" step="8">
+                    <div class="param-description">随机场的分辨率，自定义设置（Cholesky适用于小网格，n≤128计算密集，可能极慢）</div>
+                </div>
+                
+                <div class="control-item">
+                    <label>各向异性比 (X/Y)</label>
+                    <input type="number" id="anisotropy" value="1.0" min="0.2" max="5" step="0.1">
+                    <div class="param-description">1.0=各向同性，>1水平方向相关性更强</div>
+                </div>
+            </div>
+            
+            <button class="generate-btn" onclick="generateFields()">🎲 生成随机场</button>
+        </div>
+        
+        <div class="visualization">
+            <div class="field-container">
+                <div class="field-title">随机场实现 #1</div>
+                <canvas id="field1" width="400" height="400"></canvas>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-label">均值</div>
+                        <div class="stat-value" id="mean1">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">标准差</div>
+                        <div class="stat-value" id="std1">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">最小值</div>
+                        <div class="stat-value" id="min1">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">最大值</div>
+                        <div class="stat-value" id="max1">-</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="field-container">
+                <div class="field-title">随机场实现 #2</div>
+                <canvas id="field2" width="400" height="400"></canvas>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-label">均值</div>
+                        <div class="stat-value" id="mean2">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">标准差</div>
+                        <div class="stat-value" id="std2">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">最小值</div>
+                        <div class="stat-value" id="min2">-</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">最大值</div>
+                        <div class="stat-value" id="max2">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="variogram-container">
+            <div class="variogram-title">理论变差函数 γ(h)</div>
+            <canvas id="variogram" width="800" height="400"></canvas>
+        </div>
+        
+        <div class="info-box">
+            <h3>💡 算法原理：基于协方差矩阵的Cholesky分解方法</h3>
+            <p>
+                <strong>算法步骤：</strong><br>
+                1. 构建协方差矩阵 C_{pq} = 协方差( \sqrt{ (Δx / l_x)^2 + (Δy / l_y)^2 } )，其中 l_x = a/3, l_y = l_x / 各向异性比<br>
+                2. 添加微小正则化（ε ≈ 10^{-10} × sill）到对角线以确保数值稳定性（尤其对高斯模型）<br>
+                3. Cholesky分解：C = L L^T，L 为下三角矩阵<br>
+                4. 生成独立标准正态随机向量 Z ~ N(0, I)<br>
+                5. 随机场 X = L Z（矩阵-向量乘法）<br>
+                6. 标准化到均值 0 和标准差 √sill<br><br>
+                <strong>关键点：</strong><br>
+                • 精确生成有限网格上的多变量高斯随机场<br>
+                • 计算复杂度 O((n²)^3) = O(n^6)，仅适用于小网格（n≤64较慢，n=128可能极慢或内存不足）<br>
+                • 对于大网格，FFT方法更高效（O(n² log n)）<br>
+                • 变程参数除以3是为了匹配不同模型的有效距离<br>
+                • <strong>高斯模型稳定性：</strong>平滑协方差函数在离散网格上可能导致数值不稳定，已通过对角正则化修复，确保生成有空间变异的场<br><br>
+                <strong>变差函数参数：</strong><br>
+                • <strong>块金值 (C₀)：</strong>h→0时的变差值，反映微观变异<br>
+                • <strong>基台值 (C₀+C)：</strong>总方差，控制场的整体变异幅度<br>
+                • <strong>变程 (a)：</strong>有效相关距离，控制空间结构的尺度<br>
+                • <strong>各向异性：</strong>不同方向的相关长度比<br><br>
+                <strong>观察要点：</strong><br>
+                • 变程越大 → 斑块越大、越连续<br>
+                • 块金值越大 → 场越"颗粒化"、不连续<br>
+                • 指数模型 → 相对粗糙<br>
+                • 高斯模型 → 非常平滑<br>
+                • 球状模型 → 介于两者之间
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ============ 标准正态随机数生成 (Box-Muller变换) ============
+        function gaussianRandom() {
+            const u = 1 - Math.random();
+            const v = 1 - Math.random();
+            const r = Math.sqrt(-2 * Math.log(u));
+            const theta = 2 * Math.PI * v;
+            return r * Math.cos(theta);
+        }
+
+        // ============ Cholesky分解 ============
+        function choleskyDecomposition(A) {
+            const n = A.length;
+            const L = Array.from({length: n}, () => new Float64Array(n).fill(0));
+            
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j <= i; j++) {
+                    let sum = 0;
+                    for (let k = 0; k < j; k++) {
+                        sum += L[i][k] * L[j][k];
+                    }
+                    if (i === j) {
+                        const diag = A[i][i] - sum;
+                        if (diag <= 0) {
+                            throw new Error(`矩阵非正定: 对角元素 ${diag} <= 0 at ${i}`);
+                        }
+                        L[i][j] = Math.sqrt(diag);
+                    } else {
+                        L[i][j] = (A[i][j] - sum) / L[j][j];
+                    }
+                }
+            }
+            return L;
+        }
+
+        // ============ 变差函数和协方差函数 ============
+        function variogram(h, type, nugget, sill, range) {
+            if (h === 0) return 0;
+            
+            const partialSill = sill - nugget;
+            
+            switch(type) {
+                case 'spherical':
+                    if (h >= range) return sill;
+                    const hr = h / range;
+                    return nugget + partialSill * (1.5 * hr - 0.5 * hr * hr * hr);
+                
+                case 'exponential':
+                    return nugget + partialSill * (1 - Math.exp(-3 * h / range));
+                
+                case 'gaussian':
+                    return nugget + partialSill * (1 - Math.exp(-3 * (h / range) * (h / range)));
+                
+                case 'linear':
+                    if (h >= range) return sill;
+                    return nugget + partialSill * h / range;
+                
+                case 'nugget':
+                    return sill;
+                
+                default:
+                    return sill;
+            }
+        }
+
+        function covariance(h, type, nugget, sill, range) {
+            return sill - variogram(h, type, nugget, sill, range);
+        }
+
+        // ============ 使用Cholesky生成高斯随机场 ============
+        function generateRandomFieldCholesky(gridSize, type, nugget, sill, range, anisotropy) {
+            try {
+                const n = gridSize;
+                const N = n * n;
+                const lx = range / 3;
+                const ly = lx / anisotropy;
+                const epsilon = 1e-10 * sill; // 数值正则化
+                
+                console.log(`生成 ${n}x${n} 随机场 (Cholesky), N=${N}, lx=${lx.toFixed(2)}, ly=${ly.toFixed(2)}, epsilon=${epsilon}`);
+                
+                // 步骤1：构建协方差矩阵（对称）
+                const covMat = Array.from({length: N}, () => new Float64Array(N));
+                for (let p = 0; p < N; p++) {
+                    const i1 = Math.floor(p / n);
+                    const j1 = p % n;
+                    covMat[p][p] = sill;
+                    for (let q = 0; q < p; q++) {
+                        const i2 = Math.floor(q / n);
+                        const j2 = q % n;
+                        const dx = i1 - i2;
+                        const dy = j1 - j2;
+                        const hh = Math.sqrt((dx / lx) ** 2 + (dy / ly) ** 2);
+                        const c = covariance(hh, type, nugget, sill, range);
+                        covMat[p][q] = c;
+                        covMat[q][p] = c;
+                    }
+                }
+                
+                // 添加对角正则化
+                for (let p = 0; p < N; p++) {
+                    covMat[p][p] += epsilon;
+                }
+                
+                // 步骤2：Cholesky分解
+                const L = choleskyDecomposition(covMat);
+                
+                // 步骤3：生成随机向量 Z
+                const Z = new Float64Array(N);
+                for (let i = 0; i < N; i++) {
+                    Z[i] = gaussianRandom();
+                }
+                
+                // 步骤4：X = L * Z
+                const field = new Float64Array(N);
+                for (let i = 0; i < N; i++) {
+                    let sum = 0;
+                    for (let j = 0; j <= i; j++) {
+                        sum += L[i][j] * Z[j];
+                    }
+                    field[i] = sum;
+                }
+                
+                // 步骤5：标准化
+                const stats = calculateStats(field);
+                const targetStd = Math.sqrt(sill);
+                
+                if (stats.std > 1e-10) {
+                    for (let i = 0; i < N; i++) {
+                        field[i] = (field[i] - stats.mean) / stats.std * targetStd;
+                    }
+                }
+                
+                console.log('随机场生成成功');
+                return field;
+                
+            } catch (error) {
+                console.error('生成随机场时出错:', error);
+                throw error;
+            }
+        }
+
+        // ============ 统计计算 ============
+        function calculateStats(field) {
+            const n = field.length;
+            let sum = 0, sum2 = 0;
+            let min = Infinity, max = -Infinity;
+            
+            for (let i = 0; i < n; i++) {
+                sum += field[i];
+                sum2 += field[i] * field[i];
+                min = Math.min(min, field[i]);
+                max = Math.max(max, field[i]);
+            }
+            
+            const mean = sum / n;
+            const variance = sum2 / n - mean * mean;
+            const std = Math.sqrt(Math.max(0, variance));
+            
+            return { mean, std, min, max };
+        }
+
+        // ============ 可视化 ============
+        function drawField(canvas, field, gridSize) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const cellSize = width / gridSize;
+            
+            const stats = calculateStats(field);
+            const range = Math.max(stats.max - stats.min, 1e-10);
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const value = field[i * gridSize + j];
+                    const normalized = (value - stats.min) / range;
+                    
+                    // 使用冷暖色调
+                    const hue = 240 - normalized * 240;
+                    const lightness = 30 + normalized * 40;
+                    ctx.fillStyle = `hsl(${hue}, 80%, ${lightness}%)`;
+                    
+                    ctx.fillRect(j * cellSize, i * cellSize, Math.ceil(cellSize) + 1, Math.ceil(cellSize) + 1);
+                }
+            }
+            
+            return stats;
+        }
+
+        function drawVariogram(canvas, type, nugget, sill, range) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 60;
+            const plotWidth = width - 2 * padding;
+            const plotHeight = height - 2 * padding;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            // 背景
+            ctx.fillStyle = '#f9f9f9';
+            ctx.fillRect(padding, padding, plotWidth, plotHeight);
+            
+            // 网格
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                const x = padding + (plotWidth * i / 10);
+                const y = padding + (plotHeight * i / 10);
+                
+                ctx.beginPath();
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, padding + plotHeight);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(padding + plotWidth, y);
+                ctx.stroke();
+            }
+            
+            // 坐标轴
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding + plotHeight);
+            ctx.lineTo(padding + plotWidth, padding + plotHeight);
+            ctx.lineTo(padding + plotWidth - 10, padding + plotHeight - 5);
+            ctx.moveTo(padding + plotWidth, padding + plotHeight);
+            ctx.lineTo(padding + plotWidth - 10, padding + plotHeight + 5);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(padding, padding + plotHeight);
+            ctx.lineTo(padding, padding);
+            ctx.lineTo(padding - 5, padding + 10);
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding + 5, padding + 10);
+            ctx.stroke();
+            
+            // 变差函数曲线
+            const maxH = range * 2.5;
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            for (let i = 0; i <= 200; i++) {
+                const h = (maxH * i / 200);
+                const gamma = variogram(h, type, nugget, sill, range);
+                const x = padding + (h / maxH) * plotWidth;
+                const y = padding + plotHeight - (gamma / (sill * 1.2)) * plotHeight;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            
+            // 关键参数线
+            const sillY = padding + plotHeight - (sill / (sill * 1.2)) * plotHeight;
+            ctx.strokeStyle = '#27ae60';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(padding, sillY);
+            ctx.lineTo(padding + plotWidth, sillY);
+            ctx.stroke();
+            
+            if (nugget > 0.01) {
+                const nuggetY = padding + plotHeight - (nugget / (sill * 1.2)) * plotHeight;
+                ctx.strokeStyle = '#f39c12';
+                ctx.beginPath();
+                ctx.moveTo(padding, nuggetY);
+                ctx.lineTo(padding + plotWidth, nuggetY);
+                ctx.stroke();
+            }
+            
+            const rangeX = padding + (range / maxH) * plotWidth;
+            ctx.strokeStyle = '#3498db';
+            ctx.beginPath();
+            ctx.moveTo(rangeX, padding);
+            ctx.lineTo(rangeX, padding + plotHeight);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // 标签
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('距离 h', padding + plotWidth / 2, height - 20);
+            
+            ctx.save();
+            ctx.translate(20, padding + plotHeight / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('变差 γ(h)', 0, 0);
+            ctx.restore();
+            
+            // 图例
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#27ae60';
+            ctx.fillText(`基台值: ${sill.toFixed(2)}`, padding + 20, padding + 20);
+            if (nugget > 0.01) {
+                ctx.fillStyle = '#f39c12';
+                ctx.fillText(`块金值: ${nugget.toFixed(2)}`, padding + 20, padding + 40);
+            }
+            ctx.fillStyle = '#3498db';
+            ctx.fillText(`变程: ${range.toFixed(0)}`, padding + 20, padding + 60);
+            
+            // 刻度
+            ctx.fillStyle = '#666';
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'center';
+            for (let i = 0; i <= 5; i++) {
+                const x = padding + (plotWidth * i / 5);
+                const label = (maxH * i / 5).toFixed(0);
+                ctx.fillText(label, x, padding + plotHeight + 20);
+            }
+            
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= 5; i++) {
+                const y = padding + plotHeight - (plotHeight * i / 5);
+                const label = (sill * 1.2 * i / 5).toFixed(2);
+                ctx.fillText(label, padding - 10, y + 4);
+            }
+        }
+
+        // ============ 主函数 ============
+        function generateFields() {
+            try {
+                const type = document.getElementById('variogramType').value;
+                const nugget = parseFloat(document.getElementById('nugget').value);
+                const sill = parseFloat(document.getElementById('sill').value);
+                const range = parseFloat(document.getElementById('range').value);
+                const gridSize = parseInt(document.getElementById('gridSize').value);
+                const anisotropy = parseFloat(document.getElementById('anisotropy').value);
+                
+                if (gridSize > 128 || gridSize < 8 || gridSize % 8 !== 0) {
+                    alert('网格大小必须是8的倍数，且≤128。Cholesky方法计算密集，大网格可能非常慢或内存不足。');
+                    return;
+                }
+                
+                console.log('生成随机场参数:', { type, nugget, sill, range, gridSize, anisotropy });
+                
+                // 生成两个独立的随机场
+                const field1 = generateRandomFieldCholesky(gridSize, type, nugget, sill, range, anisotropy);
+                const field2 = generateRandomFieldCholesky(gridSize, type, nugget, sill, range, anisotropy);
+                
+                // 绘制随机场
+                const canvas1 = document.getElementById('field1');
+                const canvas2 = document.getElementById('field2');
+                
+                const stats1 = drawField(canvas1, field1, gridSize);
+                const stats2 = drawField(canvas2, field2, gridSize);
+                
+                console.log('随机场1统计:', stats1);
+                console.log('随机场2统计:', stats2);
+                
+                // 更新统计信息
+                document.getElementById('mean1').textContent = stats1.mean.toFixed(3);
+                document.getElementById('std1').textContent = stats1.std.toFixed(3);
+                document.getElementById('min1').textContent = stats1.min.toFixed(3);
+                document.getElementById('max1').textContent = stats1.max.toFixed(3);
+                
+                document.getElementById('mean2').textContent = stats2.mean.toFixed(3);
+                document.getElementById('std2').textContent = stats2.std.toFixed(3);
+                document.getElementById('min2').textContent = stats2.min.toFixed(3);
+                document.getElementById('max2').textContent = stats2.max.toFixed(3);
+                
+                // 绘制变差函数
+                const variogramCanvas = document.getElementById('variogram');
+                drawVariogram(variogramCanvas, type, nugget, sill, range);
+                
+                console.log('随机场生成完成！');
+            } catch (error) {
+                console.error('生成失败:', error);
+                alert('生成随机场失败: ' + error.message + '\n可能由于网格过大或内存不足。尝试调整参数或使用较小网格。');
+            }
+        }
+
+        // 初始化
+        window.onload = function() {
+            console.log('初始化演示系统');
+            generateFields();
+        };
+    </script>
+</body>
+</html>
