@@ -11,7 +11,3 @@ My name is Jian Wang. I am an Associate Professor with a research focus on spati
 
 My academic work includes leading several research projects funded by the National Natural Science Foundation of China and the Sichuan Provincial Science and Technology Program. I have published over 30 papers in respected scientific journals, including one ESI Highly Cited Paper. Additionally, I have co-authored a monograph and hold two national invention patents and three software copyrights.
 
-
-For more info
-------
-More info about configuring Academic Pages can be found in [the guide](https://academicpages.github.io/markdown/). This github project is forked from：[学术主页模板](https://github.com/academicpages/academicpages.github.io)，[并请参考使用说明](https://blog.csdn.net/qd1813100174/article/details/128604858).
