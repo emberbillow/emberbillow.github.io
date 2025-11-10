@@ -226,10 +226,12 @@ collections:
   portfolio:
     output: true
     permalink: /:collection/:path/
-  talks:
+  code:
     output: true
     permalink: /:collection/:path/
-
+  data:
+    output: true
+    permalink: /:collection/:path/
 
 
 # These settings control how pages and collections are included in the site
