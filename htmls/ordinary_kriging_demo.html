@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>普通克里格插值演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        .sidebar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .main-area {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .section {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        .param-group {
+            margin-bottom: 20px;
+        }
+        .param-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .param-group select,
+        .param-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .param-group input:focus,
+        .param-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .canvas-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        canvas {
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            cursor: crosshair;
+            background: #fafafa;
+        }
+        .results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .equation {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #667eea;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .result-item {
+            background: white;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            border-left: 4px solid #764ba2;
+        }
+        .result-item strong {
+            color: #667eea;
+        }
+        .instruction {
+            background: #fff3cd;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .mode-indicator {
+            background: #d4edda;
+            color: #155724;
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .mode-indicator.target {
+            background: #cce5ff;
+            color: #004085;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 普通克里格插值演示系统</h1>
+            <p>Ordinary Kriging Interpolation Demo - 地统计学教学工具</p>
+        </div>
+        
+        <div class="content">
+            <div class="sidebar">
+                <div class="section-title">变差函数设置</div>
+                
+                <div class="param-group">
+                    <label>变差函数类型：</label>
+                    <select id="modelType">
+                        <option value="spherical">球状模型 (Spherical)</option>
+                        <option value="exponential">指数模型 (Exponential)</option>
+                        <option value="gaussian">高斯模型 (Gaussian)</option>
+                    </select>
+                </div>
+                
+                <div class="param-group">
+                    <label>块金值 (Nugget) C₀：</label>
+                    <input type="number" id="nugget" value="0" min="0" step="0.1">
+                </div>
+                
+                <div class="param-group">
+                    <label>基台值 (Sill) C：</label>
+                    <input type="number" id="sill" value="1" min="0.1" step="0.1">
+                </div>
+                
+                <div class="param-group">
+                    <label>变程 (Range) a：</label>
+                    <input type="number" id="range" value="100" min="1" step="1">
+                </div>
+                
+                <button onclick="updateVariogram()">更新变差函数</button>
+                <button onclick="clearPoints()">清除所有点</button>
+                <button onclick="calculate()">计算克里格插值</button>
+                
+                <div class="instruction" style="margin-top: 20px;">
+                    <strong>操作说明：</strong><br>
+                    1. 设置变差函数参数<br>
+                    2. 在右侧画布点击生成已知点(≥3个)<br>
+                    3. 点击"切换到目标点模式"<br>
+                    4. 点击生成目标点(1个)<br>
+                    5. 点击"计算克里格插值"
+                </div>
+            </div>
+            
+            <div class="main-area">
+                <div class="section">
+                    <div class="section-title">变差函数图像</div>
+                    <canvas id="variogramCanvas" width="600" height="300"></canvas>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">采样点布局</div>
+                    <div id="modeIndicator" class="mode-indicator">当前模式: 添加已知点 (点击画布)</div>
+                    <button id="toggleMode" onclick="toggleMode()" style="margin-bottom: 10px;">切换到目标点模式</button>
+                    <canvas id="pointCanvas" width="600" height="400"></canvas>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">克里格方程组与计算结果</div>
+                    <div id="results" class="results">
+                        <p style="color: #666; text-align: center;">请先添加至少3个已知点和1个目标点，然后点击"计算克里格插值"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let knownPoints = [];
+        let targetPoint = null;
+        let mode = 'known'; // 'known' or 'target'
+        
+        const variogramCanvas = document.getElementById('variogramCanvas');
+        const variogramCtx = variogramCanvas.getContext('2d');
+        const pointCanvas = document.getElementById('pointCanvas');
+        const pointCtx = pointCanvas.getContext('2d');
+        
+        // 初始化
+        updateVariogram();
+        drawGrid();
+        
+        function toggleMode() {
+            if (mode === 'known') {
+                mode = 'target';
+                document.getElementById('modeIndicator').textContent = '当前模式: 添加目标点 (点击画布)';
+                document.getElementById('modeIndicator').className = 'mode-indicator target';
+                document.getElementById('toggleMode').textContent = '切换到已知点模式';
+            } else {
+                mode = 'known';
+                document.getElementById('modeIndicator').textContent = '当前模式: 添加已知点 (点击画布)';
+                document.getElementById('modeIndicator').className = 'mode-indicator';
+                document.getElementById('toggleMode').textContent = '切换到目标点模式';
+            }
+        }
+        
+        function variogram(h, type, nugget, sill, range) {
+            if (h === 0) return 0;
+            
+            const c = sill - nugget;
+            
+            if (type === 'spherical') {
+                if (h >= range) {
+                    return nugget + c;
+                }
+                return nugget + c * (1.5 * h / range - 0.5 * Math.pow(h / range, 3));
+            } else if (type === 'exponential') {
+                return nugget + c * (1 - Math.exp(-3 * h / range));
+            } else if (type === 'gaussian') {
+                return nugget + c * (1 - Math.exp(-3 * Math.pow(h / range, 2)));
+            }
+            return 0;
+        }
+        
+        function updateVariogram() {
+            const type = document.getElementById('modelType').value;
+            const nugget = parseFloat(document.getElementById('nugget').value);
+            const sill = parseFloat(document.getElementById('sill').value);
+            const range = parseFloat(document.getElementById('range').value);
+            
+            const width = variogramCanvas.width;
+            const height = variogramCanvas.height;
+            const padding = 50;
+            
+            variogramCtx.clearRect(0, 0, width, height);
+            
+            // 绘制坐标轴
+            variogramCtx.strokeStyle = '#333';
+            variogramCtx.lineWidth = 2;
+            variogramCtx.beginPath();
+            variogramCtx.moveTo(padding, height - padding);
+            variogramCtx.lineTo(width - padding, height - padding);
+            variogramCtx.lineTo(width - padding - 10, height - padding - 5);
+            variogramCtx.moveTo(width - padding, height - padding);
+            variogramCtx.lineTo(width - padding - 10, height - padding + 5);
+            variogramCtx.moveTo(padding, height - padding);
+            variogramCtx.lineTo(padding, padding);
+            variogramCtx.lineTo(padding - 5, padding + 10);
+            variogramCtx.moveTo(padding, padding);
+            variogramCtx.lineTo(padding + 5, padding + 10);
+            variogramCtx.stroke();
+            
+            // 标签
+            variogramCtx.fillStyle = '#333';
+            variogramCtx.font = '14px Arial';
+            variogramCtx.fillText('距离 h', width - padding - 20, height - padding + 30);
+            variogramCtx.save();
+            variogramCtx.translate(padding - 30, height / 2);
+            variogramCtx.rotate(-Math.PI / 2);
+            variogramCtx.fillText('γ(h)', 0, 0);
+            variogramCtx.restore();
+            
+            // 绘制变差函数曲线
+            const maxH = range * 1.5;
+            const maxGamma = sill * 1.2;
+            
+            variogramCtx.strokeStyle = '#667eea';
+            variogramCtx.lineWidth = 3;
+            variogramCtx.beginPath();
+            
+            for (let i = 0; i <= 200; i++) {
+                const h = (i / 200) * maxH;
+                const gamma = variogram(h, type, nugget, sill, range);
+                const x = padding + (h / maxH) * (width - 2 * padding);
+                const y = height - padding - (gamma / maxGamma) * (height - 2 * padding);
+                
+                if (i === 0) {
+                    variogramCtx.moveTo(x, y);
+                } else {
+                    variogramCtx.lineTo(x, y);
+                }
+            }
+            variogramCtx.stroke();
+            
+            // 绘制参考线
+            variogramCtx.strokeStyle = '#ccc';
+            variogramCtx.lineWidth = 1;
+            variogramCtx.setLineDash([5, 5]);
+            
+            // 块金值线
+            const nuggetY = height - padding - (nugget / maxGamma) * (height - 2 * padding);
+            variogramCtx.beginPath();
+            variogramCtx.moveTo(padding, nuggetY);
+            variogramCtx.lineTo(width - padding, nuggetY);
+            variogramCtx.stroke();
+            variogramCtx.fillStyle = '#ff6b6b';
+            variogramCtx.fillText(`C₀=${nugget}`, width - padding + 5, nuggetY);
+            
+            // 基台值线
+            const sillY = height - padding - (sill / maxGamma) * (height - 2 * padding);
+            variogramCtx.beginPath();
+            variogramCtx.moveTo(padding, sillY);
+            variogramCtx.lineTo(width - padding, sillY);
+            variogramCtx.stroke();
+            variogramCtx.fillStyle = '#51cf66';
+            variogramCtx.fillText(`C=${sill}`, width - padding + 5, sillY);
+            
+            // 变程线
+            const rangeX = padding + (range / maxH) * (width - 2 * padding);
+            variogramCtx.beginPath();
+            variogramCtx.moveTo(rangeX, height - padding);
+            variogramCtx.lineTo(rangeX, padding);
+            variogramCtx.stroke();
+            variogramCtx.fillStyle = '#339af0';
+            variogramCtx.fillText(`a=${range}`, rangeX - 20, padding - 5);
+            
+            variogramCtx.setLineDash([]);
+        }
+        
+        function drawGrid() {
+            const width = pointCanvas.width;
+            const height = pointCanvas.height;
+            
+            pointCtx.clearRect(0, 0, width, height);
+            
+            // 绘制网格
+            pointCtx.strokeStyle = '#e0e0e0';
+            pointCtx.lineWidth = 1;
+            
+            for (let i = 0; i <= width; i += 50) {
+                pointCtx.beginPath();
+                pointCtx.moveTo(i, 0);
+                pointCtx.lineTo(i, height);
+                pointCtx.stroke();
+            }
+            
+            for (let i = 0; i <= height; i += 50) {
+                pointCtx.beginPath();
+                pointCtx.moveTo(0, i);
+                pointCtx.lineTo(width, i);
+                pointCtx.stroke();
+            }
+            
+            // 绘制坐标轴
+            pointCtx.strokeStyle = '#333';
+            pointCtx.lineWidth = 2;
+            pointCtx.beginPath();
+            pointCtx.moveTo(0, height - 1);
+            pointCtx.lineTo(width, height - 1);
+            pointCtx.moveTo(1, 0);
+            pointCtx.lineTo(1, height);
+            pointCtx.stroke();
+            
+            // 标注坐标
+            pointCtx.fillStyle = '#666';
+            pointCtx.font = '12px Arial';
+            for (let i = 0; i <= width; i += 100) {
+                pointCtx.fillText(i, i - 10, height - 5);
+            }
+            for (let i = 0; i <= height; i += 100) {
+                pointCtx.fillText(height - i, 5, i + 5);
+            }
+        }
+        
+        function drawPoints() {
+            drawGrid();
+            
+            // 绘制已知点
+            knownPoints.forEach((pt, idx) => {
+                pointCtx.fillStyle = '#667eea';
+                pointCtx.beginPath();
+                pointCtx.arc(pt.x, pt.y, 8, 0, 2 * Math.PI);
+                pointCtx.fill();
+                pointCtx.strokeStyle = 'white';
+                pointCtx.lineWidth = 2;
+                pointCtx.stroke();
+                
+                pointCtx.fillStyle = '#333';
+                pointCtx.font = 'bold 12px Arial';
+                pointCtx.fillText(`P${idx + 1}(${pt.z.toFixed(1)})`, pt.x + 12, pt.y - 5);
+            });
+            
+            // 绘制目标点
+            if (targetPoint) {
+                pointCtx.strokeStyle = '#e74c3c';
+                pointCtx.lineWidth = 3;
+                pointCtx.beginPath();
+                pointCtx.moveTo(targetPoint.x - 10, targetPoint.y - 10);
+                pointCtx.lineTo(targetPoint.x + 10, targetPoint.y + 10);
+                pointCtx.moveTo(targetPoint.x + 10, targetPoint.y - 10);
+                pointCtx.lineTo(targetPoint.x - 10, targetPoint.y + 10);
+                pointCtx.stroke();
+                
+                pointCtx.fillStyle = '#e74c3c';
+                pointCtx.font = 'bold 12px Arial';
+                pointCtx.fillText('目标点', targetPoint.x + 12, targetPoint.y - 5);
+            }
+        }
+        
+        pointCanvas.addEventListener('click', function(e) {
+            const rect = pointCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            if (mode === 'known') {
+                // 检查是否与已有点重合
+                const tooClose = knownPoints.some(pt => 
+                    Math.sqrt(Math.pow(pt.x - x, 2) + Math.pow(pt.y - y, 2)) < 20
+                );
+                
+                if (!tooClose) {
+                    const z = Math.random() * 100; // 随机生成属性值
+                    knownPoints.push({ x, y, z });
+                    drawPoints();
+                } else {
+                    alert('点位太近，请选择其他位置！');
+                }
+            } else if (mode === 'target') {
+                if (!targetPoint) {
+                    targetPoint = { x, y };
+                    drawPoints();
+                } else {
+                    alert('目标点已存在，请先清除或切换到已知点模式！');
+                }
+            }
+        });
+        
+        function clearPoints() {
+            knownPoints = [];
+            targetPoint = null;
+            drawGrid();
+            document.getElementById('results').innerHTML = '<p style="color: #666; text-align: center;">请先添加至少3个已知点和1个目标点，然后点击"计算克里格插值"</p>';
+        }
+        
+        function distance(p1, p2) {
+            return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        }
+        
+        function calculate() {
+            if (knownPoints.length < 3) {
+                alert('请至少添加3个已知点！');
+                return;
+            }
+            
+            if (!targetPoint) {
+                alert('请添加1个目标点！');
+                return;
+            }
+            
+            const type = document.getElementById('modelType').value;
+            const nugget = parseFloat(document.getElementById('nugget').value);
+            const sill = parseFloat(document.getElementById('sill').value);
+            const range = parseFloat(document.getElementById('range').value);
+            
+            const n = knownPoints.length;
+            
+            // 构建克里格矩阵 K
+            const K = [];
+            for (let i = 0; i < n; i++) {
+                K[i] = [];
+                for (let j = 0; j < n; j++) {
+                    const h = distance(knownPoints[i], knownPoints[j]);
+                    K[i][j] = variogram(h, type, nugget, sill, range);
+                }
+                K[i][n] = 1;
+            }
+            K[n] = new Array(n).fill(1);
+            K[n][n] = 0;
+            
+            // 构建右侧向量 k
+            const k = [];
+            for (let i = 0; i < n; i++) {
+                const h = distance(knownPoints[i], targetPoint);
+                k[i] = variogram(h, type, nugget, sill, range);
+            }
+            k[n] = 1;
+            
+            // 求解线性方程组 (使用高斯消元法)
+            const weights = solveLinearSystem(K, k);
+            
+            if (!weights) {
+                alert('矩阵奇异，无法求解！请调整点的位置。');
+                return;
+            }
+            
+            // 计算估计值
+            let estimate = 0;
+            for (let i = 0; i < n; i++) {
+                estimate += weights[i] * knownPoints[i].z;
+            }
+            
+            // 计算克里金方差
+            let variance = 0;
+            for (let i = 0; i < n; i++) {
+                variance += weights[i] * k[i];
+            }
+            variance += weights[n];
+            
+            // 显示结果
+            displayResults(K, k, weights, estimate, variance);
+        }
+        
+        function solveLinearSystem(A, b) {
+            const n = A.length;
+            const augmented = A.map((row, i) => [...row, b[i]]);
+            
+            // 高斯消元
+            for (let i = 0; i < n; i++) {
+                // 寻找主元
+                let maxRow = i;
+                for (let k = i + 1; k < n; k++) {
+                    if (Math.abs(augmented[k][i]) > Math.abs(augmented[maxRow][i])) {
+                        maxRow = k;
+                    }
+                }
+                [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
+                
+                if (Math.abs(augmented[i][i]) < 1e-10) {
+                    return null;
+                }
+                
+                // 消元
+                for (let k = i + 1; k < n; k++) {
+                    const factor = augmented[k][i] / augmented[i][i];
+                    for (let j = i; j <= n; j++) {
+                        augmented[k][j] -= factor * augmented[i][j];
+                    }
+                }
+            }
+            
+            // 回代
+            const x = new Array(n);
+            for (let i = n - 1; i >= 0; i--) {
+                x[i] = augmented[i][n];
+                for (let j = i + 1; j < n; j++) {
+                    x[i] -= augmented[i][j] * x[j];
+                }
+                x[i] /= augmented[i][i];
+            }
+            
+            return x;
+        }
+        
+        function displayResults(K, k, weights, estimate, variance) {
+            const n = knownPoints.length;
+            let html = '<div class="equation">';
+            html += '<strong>克里格方程组：</strong><br><br>';
+            
+            for (let i = 0; i < n; i++) {
+                let eq = '';
+                for (let j = 0; j < n; j++) {
+                    eq += `${K[i][j].toFixed(4)} · λ${j + 1}`;
+                    if (j < n - 1) eq += ' + ';
+                }
+                eq += ` + μ = ${k[i].toFixed(4)}`;
+                html += eq + '<br>';
+            }
+            
+            html += '<br>';
+            let sumEq = '';
+            for (let i = 0; i < n; i++) {
+                sumEq += `λ${i + 1}`;
+                if (i < n - 1) sumEq += ' + ';
+            }
+            sumEq += ' = 1';
+            html += sumEq;
+            html += '</div>';
+            
+            html += '<div class="result-item">';
+            html += '<strong>权重系数：</strong><br>';
+            for (let i = 0; i < n; i++) {
+                html += `λ${i + 1} = ${weights[i].toFixed(6)}<br>`;
+            }
+            html += `拉格朗日乘子 μ = ${weights[n].toFixed(6)}`;
+            html += '</div>';
+            
+            html += '<div class="result-item">';
+            html += `<strong>估计值：</strong> Z* = ${estimate.toFixed(4)}<br>`;
+            html += `<strong>克里金方差：</strong> σ²ₖ = ${variance.toFixed(4)}<br>`;
+            html += `<strong>克里金标准差：</strong> σₖ = ${Math.sqrt(Math.max(0, variance)).toFixed(4)}`;
+            html += '</div>';
+            
+            html += '<div class="result-item">';
+            html += '<strong>计算公式：</strong><br>';
+            html += 'Z* = Σ λᵢ · Zᵢ<br>';
+            html += 'σ²ₖ = Σ λᵢ · γ(xᵢ, x₀) + μ';
+            html += '</div>';
+            
+            document.getElementById('results').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
