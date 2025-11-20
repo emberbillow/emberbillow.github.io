@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spatial Grid Parameter Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 0;
+        }
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-right: 1px solid #e0e0e0;
+        }
+        .visualization {
+            padding: 30px;
+            background: white;
+        }
+        .file-input {
+            margin-bottom: 25px;
+        }
+        .file-input label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .file-input input[type="file"] {
+            display: none;
+        }
+        .file-button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .file-button:hover {
+            transform: translateY(-2px);
+        }
+        .file-name {
+            display: block;
+            margin-top: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+        .coord-select {
+            margin-bottom: 25px;
+        }
+        .coord-select label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .coord-select select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+        .stats {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 2px solid #e0e0e0;
+        }
+        .stats h3 {
+            font-size: 14px;
+            color: #667eea;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+        .stat-value {
+            color: #333;
+            font-weight: 600;
+        }
+        .param-group {
+            margin-bottom: 25px;
+        }
+        .param-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .input-with-info {
+            position: relative;
+        }
+        .input-with-info input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .input-info {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 12px;
+            pointer-events: none;
+        }
+        .grid-info {
+            background: #e8f5e9;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-size: 13px;
+            color: #2e7d32;
+        }
+        .apply-button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .apply-button:hover {
+            transform: translateY(-2px);
+        }
+        .apply-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        canvas {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            max-width: 100%;
+            display: block;
+        }
+        .canvas-container {
+            text-align: center;
+        }
+        .no-data {
+            text-align: center;
+            padding: 100px 20px;
+            color: #999;
+        }
+        .no-data-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ Spatial Grid Parameter Tool</h1>
+            <p>Overlay square cell grids on spatial point data</p>
+        </div>
+        <div class="content">
+            <div class="controls">
+                <div class="file-input">
+                    <label>Load Data File</label>
+                    <label for="fileInput" class="file-button">
+                        📁 Choose File
+                    </label>
+                    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+                    <span class="file-name" id="fileName">No file selected</span>
+                </div>
+
+                <div class="coord-select">
+                    <label>X Coordinate Column</label>
+                    <select id="xCoord" disabled>
+                        <option value="">Select column...</option>
+                    </select>
+                </div>
+
+                <div class="coord-select">
+                    <label>Y Coordinate Column</label>
+                    <select id="yCoord" disabled>
+                        <option value="">Select column...</option>
+                    </select>
+                </div>
+
+                <div class="stats" id="statsPanel" style="display: none;">
+                    <h3>Data Range</h3>
+                    <div class="stat-row">
+                        <span class="stat-label">X Min:</span>
+                        <span class="stat-value" id="xMin">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">X Max:</span>
+                        <span class="stat-value" id="xMax">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Y Min:</span>
+                        <span class="stat-value" id="yMin">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Y Max:</span>
+                        <span class="stat-value" id="yMax">-</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Points:</span>
+                        <span class="stat-value" id="pointCount">-</span>
+                    </div>
+                </div>
+
+                <div class="param-group">
+                    <label>Cell Size</label>
+                    <div class="input-with-info">
+                        <input type="number" id="cellSize" step="any" disabled>
+                    </div>
+                    <div class="grid-info" id="gridInfo" style="display: none;">
+                        <strong>Grid: <span id="cellsX">0</span> × <span id="cellsY">0</span> cells</strong>
+                    </div>
+                </div>
+
+                <button class="apply-button" id="applyButton" disabled>Apply Grid</button>
+            </div>
+
+            <div class="visualization">
+                <div class="canvas-container" id="canvasContainer">
+                    <div class="no-data">
+                        <div class="no-data-icon">📊</div>
+                        <h3>No Data Loaded</h3>
+                        <p>Upload a CSV or Excel file to begin</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = [];
+        let columns = [];
+        let xCol = null;
+        let yCol = null;
+        let cellSize = null;
+
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const xCoordSelect = document.getElementById('xCoord');
+        const yCoordSelect = document.getElementById('yCoord');
+        const cellSizeInput = document.getElementById('cellSize');
+        const applyButton = document.getElementById('applyButton');
+        const statsPanel = document.getElementById('statsPanel');
+        const gridInfo = document.getElementById('gridInfo');
+        const canvasContainer = document.getElementById('canvasContainer');
+
+        fileInput.addEventListener('change', handleFileSelect);
+        xCoordSelect.addEventListener('change', handleCoordChange);
+        yCoordSelect.addEventListener('change', handleCoordChange);
+        cellSizeInput.addEventListener('input', updateGridInfo);
+        applyButton.addEventListener('click', drawVisualization);
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            fileName.textContent = file.name;
+            const fileExt = file.name.split('.').pop().toLowerCase();
+
+            if (fileExt === 'csv') {
+                parseCSV(file);
+            } else if (fileExt === 'xlsx' || fileExt === 'xls') {
+                parseExcel(file);
+            }
+        }
+
+        function parseCSV(file) {
+            Papa.parse(file, {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    data = results.data;
+                    columns = results.meta.fields;
+                    populateColumnSelects();
+                }
+            });
+        }
+
+        function parseExcel(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data_buffer = e.target.result;
+                const workbook = XLSX.read(data_buffer, {type: 'array'});
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                
+                columns = jsonData[0];
+                data = jsonData.slice(1).map(row => {
+                    const obj = {};
+                    columns.forEach((col, i) => {
+                        obj[col] = row[i];
+                    });
+                    return obj;
+                });
+                
+                populateColumnSelects();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function populateColumnSelects() {
+            xCoordSelect.innerHTML = '<option value="">Select column...</option>';
+            yCoordSelect.innerHTML = '<option value="">Select column...</option>';
+
+            columns.forEach(col => {
+                const xOption = document.createElement('option');
+                xOption.value = col;
+                xOption.textContent = col;
+                xCoordSelect.appendChild(xOption);
+
+                const yOption = document.createElement('option');
+                yOption.value = col;
+                yOption.textContent = col;
+                yCoordSelect.appendChild(yOption);
+            });
+
+            xCoordSelect.disabled = false;
+            yCoordSelect.disabled = false;
+
+            // Auto-detect coordinate columns
+            autoDetectCoordinates();
+        }
+
+        function autoDetectCoordinates() {
+            const xPatterns = /^(x|xcoord|longitude|lon|easting)$/i;
+            const yPatterns = /^(y|ycoord|latitude|lat|northing)$/i;
+
+            columns.forEach(col => {
+                if (xPatterns.test(col) && !xCol) {
+                    xCoordSelect.value = col;
+                    xCol = col;
+                }
+                if (yPatterns.test(col) && !yCol) {
+                    yCoordSelect.value = col;
+                    yCol = col;
+                }
+            });
+
+            if (xCol && yCol) {
+                handleCoordChange();
+            }
+        }
+
+        function handleCoordChange() {
+            xCol = xCoordSelect.value;
+            yCol = yCoordSelect.value;
+
+            if (xCol && yCol) {
+                calculateStats();
+                cellSizeInput.disabled = false;
+                applyButton.disabled = false;
+            }
+        }
+
+        function calculateStats() {
+            const xValues = data.map(d => parseFloat(d[xCol])).filter(v => !isNaN(v));
+            const yValues = data.map(d => parseFloat(d[yCol])).filter(v => !isNaN(v));
+
+            const xMin = Math.min(...xValues);
+            const xMax = Math.max(...xValues);
+            const yMin = Math.min(...yValues);
+            const yMax = Math.max(...yValues);
+
+            document.getElementById('xMin').textContent = xMin.toFixed(2);
+            document.getElementById('xMax').textContent = xMax.toFixed(2);
+            document.getElementById('yMin').textContent = yMin.toFixed(2);
+            document.getElementById('yMax').textContent = yMax.toFixed(2);
+            document.getElementById('pointCount').textContent = xValues.length;
+
+            statsPanel.style.display = 'block';
+
+            // Calculate default cell size (divide x-range by 100)
+            const xRange = xMax - xMin;
+            cellSize = xRange / 100;
+            cellSizeInput.value = cellSize.toFixed(6);
+
+            updateGridInfo();
+        }
+
+        function updateGridInfo() {
+            const xValues = data.map(d => parseFloat(d[xCol])).filter(v => !isNaN(v));
+            const yValues = data.map(d => parseFloat(d[yCol])).filter(v => !isNaN(v));
+
+            const xMin = Math.min(...xValues);
+            const xMax = Math.max(...xValues);
+            const yMin = Math.min(...yValues);
+            const yMax = Math.max(...yValues);
+
+            const currentCellSize = parseFloat(cellSizeInput.value);
+            if (currentCellSize > 0) {
+                const cellsX = Math.ceil((xMax - xMin) / currentCellSize);
+                const cellsY = Math.ceil((yMax - yMin) / currentCellSize);
+
+                document.getElementById('cellsX').textContent = cellsX;
+                document.getElementById('cellsY').textContent = cellsY;
+                gridInfo.style.display = 'block';
+            }
+        }
+
+        function drawVisualization() {
+            const xValues = data.map(d => parseFloat(d[xCol])).filter(v => !isNaN(v));
+            const yValues = data.map(d => parseFloat(d[yCol])).filter(v => !isNaN(v));
+
+            const xMin = Math.min(...xValues);
+            const xMax = Math.max(...xValues);
+            const yMin = Math.min(...yValues);
+            const yMax = Math.max(...yValues);
+
+            const currentCellSize = parseFloat(cellSizeInput.value);
+
+            // Create canvas
+            const canvas = document.createElement('canvas');
+            const canvasWidth = 800;
+            const canvasHeight = 600;
+            const padding = 50;
+
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            // Calculate scale
+            const xRange = xMax - xMin;
+            const yRange = yMax - yMin;
+            const plotWidth = canvasWidth - 2 * padding;
+            const plotHeight = canvasHeight - 2 * padding;
+
+            const xScale = plotWidth / xRange;
+            const yScale = plotHeight / yRange;
+            const scale = Math.min(xScale, yScale);
+
+            function toCanvasX(x) {
+                return padding + (x - xMin) * scale;
+            }
+
+            function toCanvasY(y) {
+                return canvasHeight - padding - (y - yMin) * scale;
+            }
+
+            // Draw grid lines
+            ctx.strokeStyle = '#d3d3d3';
+            ctx.lineWidth = 1;
+
+            const cellsX = Math.ceil(xRange / currentCellSize);
+            const cellsY = Math.ceil(yRange / currentCellSize);
+
+            // Vertical grid lines
+            for (let i = 0; i <= cellsX; i++) {
+                const x = xMin + i * currentCellSize;
+                const canvasX = toCanvasX(x);
+                ctx.beginPath();
+                ctx.moveTo(canvasX, toCanvasY(yMin));
+                ctx.lineTo(canvasX, toCanvasY(yMax));
+                ctx.stroke();
+            }
+
+            // Horizontal grid lines
+            for (let i = 0; i <= cellsY; i++) {
+                const y = yMin + i * currentCellSize;
+                const canvasY = toCanvasY(y);
+                ctx.beginPath();
+                ctx.moveTo(toCanvasX(xMin), canvasY);
+                ctx.lineTo(toCanvasX(xMax), canvasY);
+                ctx.stroke();
+            }
+
+            // Draw points
+            ctx.fillStyle = '#667eea';
+            data.forEach(d => {
+                const x = parseFloat(d[xCol]);
+                const y = parseFloat(d[yCol]);
+                if (!isNaN(x) && !isNaN(y)) {
+                    ctx.beginPath();
+                    ctx.arc(toCanvasX(x), toCanvasY(y), 3, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+
+            // Draw axes
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, canvasHeight - padding);
+            ctx.lineTo(canvasWidth - padding, canvasHeight - padding);
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, canvasHeight - padding);
+            ctx.stroke();
+
+            // Clear container and add canvas
+            canvasContainer.innerHTML = '';
+            canvasContainer.appendChild(canvas);
+        }
+    </script>
+</body>
+</html>
